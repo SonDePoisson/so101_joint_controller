@@ -29,6 +29,20 @@ class SO101Driver:
         :param wait: Wait for movement to finish
         """
         return self.st.MoveTo(servo_id, position, speed, acc, wait)
+    
+    def read_servo_position(self, servo_id):
+        """
+        Read the current position of a servo.
+
+        :param servo_id: ID of the servo to read
+        :return: Position value or None if error
+        """
+        try:
+            position = self.st.ReadPosition(servo_id)
+            return position
+        except Exception as e:
+            print(f"Error reading position for servo {servo_id}:", e)
+            return None
 
     def read_servo_state(self, servo_id):
         """

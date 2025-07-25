@@ -2,7 +2,7 @@ import os
 import pygame
 from so101_driver.so101_driver import SO101Driver
 import time
-import sys
+import yaml
 
 # --- Gamepad constants for Stadia controller ---
 AXIS_LEFT_STICK_X = 0
@@ -30,15 +30,27 @@ if __name__ == "__main__":
     driver = SO101Driver(device)
     print("Detected servo IDs:", driver.servo_ids)
 
+    with open(os.path.join(os.path.dirname(__file__), "../joint_limits.yaml")) as f:
+        joint_config = yaml.safe_load(f)
+    zero_positions = joint_config["zero"]
+    print(f"{zero_positions=}")
+
+    pygame.init()
+    pygame.joystick.init()
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+
     try:
         while True:
-            positions = []
-            for servo_id in driver.servo_ids:
-                pos = driver.read_servo_position(servo_id)
-                positions.append(f"{pos:5}" if pos is not None else " None")
-            line = " | ".join([f"ID{idx+1}: {p}" for idx, p in enumerate(positions)])
-            print(f"\r{line}", end="", flush=True)
-            time.sleep(0.1)
+            pygame.event.pump()
+            if joystick.get_button(BUTTON_START):
+                for joint_id, zero_pos in zero_positions.items():
+                    driver.move_servo(joint_id, zero_pos)
+                time.sleep(0.5)  # Anti-rebond
+            if joystick.get_button(BUTTON_B):
+                driver.stop_robot()
+            
+            time.sleep(0.01)
     except KeyboardInterrupt:
         print("\nExit")
     finally:

@@ -23,9 +23,13 @@ class SO101Driver:
             print("SO101Driver init:", e)
             raise
         
-    def stop_robot(self):
+    def free_robot(self):
         for id in self.servo_ids :
             self.st.StopServo(id)
+            
+    def activate_robot(self):
+        for id in self.servo_ids :
+            self.st.StartServo(id)
 
     def move_servo(self, servo_id, position, speed=2400, acc=50, wait=False):
         """

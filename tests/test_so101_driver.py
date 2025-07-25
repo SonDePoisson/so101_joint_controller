@@ -47,12 +47,15 @@ if __name__ == "__main__":
                 for joint_id, zero_pos in zero_positions.items():
                     driver.move_servo(joint_id, zero_pos)
                 time.sleep(0.5)  # Anti-rebond
+                
             if joystick.get_button(BUTTON_B):
-                driver.stop_robot()
+                driver.free_robot()
+            else :
+                driver.activate_robot()
             
             time.sleep(0.01)
     except KeyboardInterrupt:
         print("\nExit")
     finally:
-        driver.stop_robot()
+        driver.free_robot()
         pygame.quit()

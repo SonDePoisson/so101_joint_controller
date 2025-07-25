@@ -33,25 +33,43 @@ if __name__ == "__main__":
     with open(os.path.join(os.path.dirname(__file__), "../joint_limits.yaml")) as f:
         joint_config = yaml.safe_load(f)
     zero_positions = joint_config["zero"]
-    print(f"{zero_positions=}")
 
     pygame.init()
     pygame.joystick.init()
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
 
+    current_servo_index = 0
+    current_servo = driver.servo_ids[current_servo_index]
+
+
     try:
         while True:
             pygame.event.pump()
+            
+            # Zero Position
             if joystick.get_button(BUTTON_START):
                 for joint_id, zero_pos in zero_positions.items():
                     driver.move_servo(joint_id, zero_pos)
-                time.sleep(0.5)  # Anti-rebond
+                time.sleep(0.5)
                 
+            # Free Robot
             if joystick.get_button(BUTTON_B):
                 driver.free_robot()
             else :
                 driver.activate_robot()
+                
+            if joystick.get_button(BUTTON_LB):
+                current_servo_index = (current_servo_index - 1) % len(driver.servo_ids)
+                current_servo = driver.servo_ids[current_servo_index]
+                print(f"\rJoint sélectionné : {current_servo}", end=" ", flush=True)
+                time.sleep(0.3)
+            if joystick.get_button(BUTTON_RB):
+                current_servo_index = (current_servo_index + 1) % len(driver.servo_ids)
+                current_servo = driver.servo_ids[current_servo_index]
+                print(f"\rJoint sélectionné : {current_servo}", end=" ", flush=True)
+                time.sleep(0.3)
+            
             
             time.sleep(0.01)
     except KeyboardInterrupt:

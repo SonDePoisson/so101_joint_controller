@@ -1,4 +1,9 @@
 from st3215 import ST3215
+import yaml
+import time
+import os
+import sys
+import select
 
 class SO101Driver:
     """
@@ -17,6 +22,10 @@ class SO101Driver:
         except Exception as e:
             print("SO101Driver init:", e)
             raise
+        
+    def stop_robot(self):
+        for id in self.servo_ids :
+            self.st.StopServo(id)
 
     def move_servo(self, servo_id, position, speed=2400, acc=50, wait=False):
         """
@@ -44,7 +53,7 @@ class SO101Driver:
             print(f"Error reading position for servo {servo_id}:", e)
             return None
 
-    def read_servo_state(self, servo_id):
+    def dump_servo_state(self, servo_id):
         """
         Read and display the state of a servo: status, position, velocity, acceleration.
 
@@ -76,3 +85,65 @@ class SO101Driver:
         print(f"  Acceleration: {acceleration}")
 
         return state
+
+    def calibrate_joints(self, yaml_path=None):
+        """
+        Let the user manually move all joints. First, all joints are set to zero and the user
+        confirms the zero position. Then, the user moves the joints by hand and the method records
+        the min and max position reached by each joint. At the end, it saves the results in a YAML file.
+
+        :param yaml_path: Path to the output YAML file (default: ./joint_limits.yaml at project root)
+        """
+        if yaml_path is None:
+            yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "joint_limits.yaml")
+            yaml_path = os.path.abspath(yaml_path)
+
+        zero_positions = {}
+        print("Move all joints to zero position, then press Enter")
+        try:
+            while True:
+                for servo_id in self.servo_ids:
+                    zero_positions[servo_id] = self.read_servo_position(servo_id)
+                if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                    input()
+                    break
+        except KeyboardInterrupt:
+            print("\nCalibration interrupted by user")
+            return
+
+        print("\nMove each joint by hand to its limits")
+        print("Press Enter to save calibration")
+        joint_limits = {servo_id: {"min": None, "max": None} for servo_id in self.servo_ids}
+
+        try:
+            while True:
+                for servo_id in self.servo_ids:
+                    pos = self.read_servo_position(servo_id)
+                    if pos is not None:
+                        if joint_limits[servo_id]["min"] is None or pos < joint_limits[servo_id]["min"]:
+                            joint_limits[servo_id]["min"] = pos
+                        if joint_limits[servo_id]["max"] is None or pos > joint_limits[servo_id]["max"]:
+                            joint_limits[servo_id]["max"] = pos
+
+                line = ""
+                for servo_id in self.servo_ids:
+                    line += f"{servo_id}: min={joint_limits[servo_id]['min']} max={joint_limits[servo_id]['max']} | "
+                print(f"\r{line}", end='', flush=True)
+                time.sleep(0.1)
+
+                if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                    input()
+                    break
+
+        except KeyboardInterrupt:
+            print("\nCalibration interrupted by user")
+            return
+
+        # Stocke tout dans le YAML
+        calibration_data = {
+            "zero": zero_positions,
+            "limits": joint_limits
+        }
+        with open(yaml_path, "w") as f:
+            yaml.dump(calibration_data, f)
+        print(f"\nJoint zeros and limits saved to {yaml_path}")

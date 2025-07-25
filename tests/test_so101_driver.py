@@ -2,6 +2,7 @@ import os
 import pygame
 from so101_driver.so101_driver import SO101Driver
 import time
+import sys
 
 # --- Gamepad constants for Stadia controller ---
 AXIS_LEFT_STICK_X = 0
@@ -25,68 +26,21 @@ BUTTON_RS     = 10 # Right stick press
 # ------------------------------------------------
 
 if __name__ == "__main__":
-    # Init robot
     device = os.getenv("SO101_PORT", "/dev/ttyUSB0")
     driver = SO101Driver(device)
     print("Detected servo IDs:", driver.servo_ids)
 
-    # Init gamepad
-    pygame.init()
-    pygame.joystick.init()
-    if pygame.joystick.get_count() == 0:
-        print("No joystick detected.")
-        exit(1)
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    print(f"Joystick detected: {joystick.get_name()}")
-
-    servo_ids = driver.servo_ids
-    current_index = 0
-    current_servo = servo_ids[current_index]
-    position = driver.read_servo_position(current_servo)  # Position initiale du servo
-    step = 50        # Pas d'incrément/décrément
-
-    prev_lb = 0
-    prev_rb = 0
-
     try:
         while True:
-            pygame.event.pump()
-
-            lb = joystick.get_button(BUTTON_LB)
-            rb = joystick.get_button(BUTTON_RB)
-
-            if lb and not prev_lb:
-                current_index = (current_index - 1) % len(servo_ids)
-                current_servo = servo_ids[current_index]
-                print(f"\nSwitched to servo {current_servo}")
-            if rb and not prev_rb:
-                current_index = (current_index + 1) % len(servo_ids)
-                current_servo = servo_ids[current_index]
-                print(f"\nSwitched to servo {current_servo}")
-
-            prev_lb = lb
-            prev_rb = rb
-
-            lt = joystick.get_axis(AXIS_LEFT_TRIGGER)
-            rt = joystick.get_axis(AXIS_RIGHT_TRIGGER)
-
-            if rt > 0.5:
-                position += step
-            if lt > 0.5:
-                position -= step
-
-            position = max(0, min(4095, position))
-
-            driver.move_servo(current_servo, position)
-            real_position = driver.read_servo_position(current_servo)
-
-            print(f"Servo {current_servo} | Target: {position} | Real: {real_position}", end='\r')
-
+            positions = []
+            for servo_id in driver.servo_ids:
+                pos = driver.read_servo_position(servo_id)
+                positions.append(f"{pos:5}" if pos is not None else " None")
+            line = " | ".join([f"ID{idx+1}: {p}" for idx, p in enumerate(positions)])
+            print(f"\r{line}", end="", flush=True)
             time.sleep(0.1)
-
     except KeyboardInterrupt:
         print("\nExit")
-
     finally:
+        driver.stop_robot()
         pygame.quit()

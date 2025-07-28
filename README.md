@@ -35,10 +35,11 @@ Make sure your gamepad is connected and recognized by the system before running 
 
 ## Requirements
 
-- Python 3.10
-- `pygame`
-- `pyyaml`
-- The SO101 robot and ST3215 servo driver
+Install requirements with :
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Note
 

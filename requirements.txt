@@ -1,3 +1,6 @@
+jinja2
+setuptools
+typeguard
 pygame
 pyyaml
 st3215
